@@ -3,7 +3,7 @@ const bodyParser = require('body-parser');
 const path = require('path');
 const crypto = require('crypto');
 const mongoose = require('mongoose');
-const mongoUri = require('/config/db.js');
+const db = require('./config/db.js');
 const multer = require('multer');
 const GridFsStorage = require('multer-gridfs-storage');
 const Grid = require('gridfs-stream');
@@ -15,8 +15,13 @@ const app = express();
 app.use(bodyParser.json());
 app.use(methodOverride('_method'));
 
+const mongoUri = db.url;
+
 // Create mongo connection
-const conn = mongoose.createConnection(mongoURI);
+mongoose.set('useNewUrlParser', true);
+mongoose.set('useFindAndModify', false);
+mongoose.set('useCreateIndex', true);
+const conn = mongoose.createConnection(mongoUri);
 
 // Init gfs
 let gfs;
@@ -29,7 +34,7 @@ conn.once('open', () => {
 
 // Create storage engine
 const storage = new GridFsStorage({
-  url: mongoURI,
+  url: mongoUri,
   file: (req, file) => {
     return new Promise((resolve, reject) => {
       crypto.randomBytes(16, (err, buf) => {
@@ -54,7 +59,6 @@ app.get('/', (req, res) => {
   gfs.files.find().toArray((err, files) => {
     // Check if files
     if (!files || files.length === 0) {
-      res.render('index', { files: false });
     } else {
       files.map(file => {
         if (
@@ -66,14 +70,13 @@ app.get('/', (req, res) => {
           file.isImage = false;
         }
       });
-      res.render('index', { files: files });
     }
   });
 });
 
 // @route POST /upload
 // @desc  Uploads file to DB
-app.post('/upload', upload.single('file'), (req, res) => {
+app.post('/image', upload.single('file'), (req, res) => {
   // res.json({ file: req.file });
   res.redirect('/');
 });
